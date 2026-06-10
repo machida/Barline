@@ -48,6 +48,13 @@ body {
   background: var(--canvas);
 }
 
+.app-footer {
+  padding: 12px 32px;
+  text-align: center;
+  color: var(--muted, #888);
+  font-size: 12px;
+}
+
 button, input, select { font: inherit; }
 button { cursor: pointer; }
 
@@ -958,7 +965,7 @@ summary:focus-visible {
 
 @media print {
   body { min-width: 0; background: white; }
-  .app-header, .editor-panel, .preview-toolbar, .toast { display: none !important; }
+  .app-header, .editor-panel, .preview-toolbar, .toast, .app-footer { display: none !important; }
   .workspace { display: block; min-height: 0; }
   .preview-panel { padding: 0; overflow: visible; background: white; }
   .sheet {
