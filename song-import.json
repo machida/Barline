@@ -1,0 +1,212 @@
+{
+  "title": "",
+  "artist": "",
+  "key": "G",
+  "tempo": 120,
+  "timeSignature": "4/4",
+  "sections": [
+    {
+      "label": "Intro",
+      "bars": [
+        { "chords": [{ "text": "G（レシ）" }] },
+        { "chords": [{ "text": "Gadd9（レラ）" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gadd9" }] }
+      ]
+    },
+    {
+      "label": "A",
+      "bars": [
+        { "chords": [{ "text": "G（レシ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] },
+        { "chords": [{ "text": "Em/G（レソ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] },
+        { "chords": [{ "text": "G（レシ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] },
+        { "chords": [{ "text": "Em/G（レソ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] }
+      ]
+    },
+    {
+      "label": "A'",
+      "bars": [
+        { "chords": [{ "text": "G（レシ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] },
+        { "chords": [{ "text": "Em/G（レソ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] },
+        { "chords": [{ "text": "G（レシ）" }] },
+        { "chords": [{ "text": "Gaug（ミ♭ソ）" }] },
+        { "chords": [{ "text": "Em/G（レソ）" }] },
+        { "chords": [{ "text": "G7（ファソ）" }] }
+      ]
+    },
+    {
+      "label": "B",
+      "bars": [
+        { "chords": [{ "text": "C（ドミ）" }] },
+        { "chords": [{ "text": "C（ドミ）" }] },
+        { "chords": [{ "text": "Cm（ドミ♭）" }] },
+        { "chords": [{ "text": "-" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "D" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "bars": [
+        { "chords": [{ "text": "Am" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "Bm" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D♯" }] },
+        { "chords": [{ "text": "F" }] }
+      ]
+    },
+    {
+      "label": "間奏",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gadd9" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gadd9" }] }
+      ]
+    },
+    {
+      "label": "A",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gaug" }] },
+        { "chords": [{ "text": "Em/G" }] },
+        { "chords": [{ "text": "Gaug" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gaug" }] },
+        { "chords": [{ "text": "Em/G" }] },
+        { "chords": [{ "text": "Gaug" }, { "text": "-" }, { "text": "-" }, { "text": "-" }] }
+      ]
+    },
+    {
+      "label": "A'",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gaug" }] },
+        { "chords": [{ "text": "Em/G" }] },
+        { "chords": [{ "text": "Gaug" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "Gaug" }] },
+        { "chords": [{ "text": "Em/G" }] },
+        { "chords": [{ "text": "G7" }] }
+      ]
+    },
+    {
+      "label": "B",
+      "bars": [
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Cm" }] },
+        { "chords": [{ "text": "-" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "D" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "bars": [
+        { "chords": [{ "text": "Am" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "Bm" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D♯" }] },
+        { "chords": [{ "text": "F" }] }
+      ]
+    },
+    {
+      "label": "間奏",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "GM7" }, { "text": "G6" }] },
+        { "chords": [{ "text": "C/G" }] },
+        { "chords": [{ "text": "C/G" }, { "text": "GM7" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "GM7" }, { "text": "G6" }] },
+        { "chords": [{ "text": "C/G" }] },
+        { "chords": [{ "text": "-" }, { "text": "G/D" }, { "text": "D♯6" }] }
+      ]
+    },
+    {
+      "label": "C",
+      "bars": [
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "Bm" }] },
+        { "chords": [{ "text": "B" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "G" }, { "text": "-" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "bars": [
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "G" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "D" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "bars": [
+        { "chords": [{ "text": "Am" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "Em" }] },
+        { "chords": [{ "text": "Bm" }] },
+        { "chords": [{ "text": "C" }] },
+        { "chords": [{ "text": "D" }] },
+        { "chords": [{ "text": "D♯" }] },
+        { "chords": [{ "text": "F" }] }
+      ]
+    },
+    {
+      "label": "Outro",
+      "bars": [
+        { "chords": [{ "text": "G" }, { "text": "G" }, { "text": "F" }, { "text": "G" }, { "text": "-" }, { "text": "G" }, { "text": "F" }, { "text": "G" }] },
+        { "chords": [{ "text": "-" }, { "text": "G" }, { "text": "F" }, { "text": "G" }, { "text": "C" }, { "text": "C" }, { "text": "C" }, { "text": "B" }] },
+        { "chords": [{ "text": "G" }, { "text": "G" }, { "text": "F" }, { "text": "G" }, { "text": "-" }, { "text": "G" }, { "text": "F" }, { "text": "G" }] },
+        { "chords": [{ "text": "-" }, { "text": "G" }, { "text": "F" }, { "text": "G" }, { "text": "F" }, { "text": "E" }, { "text": "F" }, { "text": "F♯" }] }
+      ]
+    }
+  ]
+}

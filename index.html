@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barline - バンド用リードシート作成ツール</title>
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="brand">
+        <h1>Barline</h1>
+        <p class="eyebrow">BAND LEAD SHEET MAKER</p>
+      </div>
+      <div class="header-actions">
+        <button id="export-json" type="button" class="button secondary">書き出し</button>
+        <label class="button secondary file-button">
+          読み込み
+          <input id="import-json" type="file" accept=".json,application/json">
+        </label>
+        <button id="reset-sheet" type="button" class="button secondary">リセット</button>
+        <button id="print-sheet" type="button" class="button primary">印刷</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="editor-panel">
+        <div class="editor-tabs" role="tablist" aria-label="編集パネル切り替え">
+          <button class="editor-tab active" type="button" role="tab" aria-selected="true" data-editor-tab="song" aria-controls="song-editor-panel">曲情報</button>
+          <button class="editor-tab" type="button" role="tab" aria-selected="false" data-editor-tab="sections" aria-controls="section-editor-panel">セクション</button>
+        </div>
+
+        <section id="song-editor-panel" class="editor-card song-editor active" role="tabpanel">
+          <div class="card-heading">
+            <div>
+              <h2>曲情報</h2>
+            </div>
+          </div>
+          <div class="form-grid">
+            <label class="field field-wide">
+              <span>曲名</span>
+              <input id="title" type="text" placeholder="曲名">
+            </label>
+            <label class="field field-wide">
+              <span>アーティスト名</span>
+              <input id="artist" type="text" placeholder="アーティスト名">
+            </label>
+            <label class="field">
+              <span>Key</span>
+              <select id="key"></select>
+            </label>
+            <label class="field">
+              <span>BPM</span>
+              <input id="tempo" type="number" min="20" max="400" step="1">
+            </label>
+            <label class="field">
+              <span>拍子</span>
+              <select id="time-signature">
+                <option>4/4</option><option>3/4</option><option>2/4</option>
+                <option>6/8</option><option>12/8</option><option>5/4</option><option>7/8</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>調号表記</span>
+              <select id="accidental-preference">
+                <option value="sharp">♯ 優先</option>
+                <option value="flat">♭ 優先</option>
+              </select>
+            </label>
+            <div class="transpose-control field-wide">
+              <label class="toggle-option">
+                <input id="transpose-enabled" type="checkbox">
+                <span>プレビューを移調</span>
+              </label>
+              <label class="transpose-field">
+                <span>移調幅</span>
+                <select id="transpose-amount">
+                  <option value="-11">-11</option><option value="-10">-10</option>
+                  <option value="-9">-9</option><option value="-8">-8</option>
+                  <option value="-7">-7</option><option value="-6">-6</option>
+                  <option value="-5">-5</option><option value="-4">-4</option>
+                  <option value="-3">-3</option><option value="-2">-2</option>
+                  <option value="-1">-1</option><option value="0" selected>0</option>
+                  <option value="1">+1</option><option value="2">+2</option>
+                  <option value="3">+3</option><option value="4">+4</option>
+                  <option value="5">+5</option><option value="6">+6</option>
+                  <option value="7">+7</option><option value="8">+8</option>
+                  <option value="9">+9</option><option value="10">+10</option>
+                  <option value="11">+11</option>
+                </select>
+              </label>
+            </div>
+            <div class="preview-degree-control field-wide">
+              <label class="toggle-option">
+                <input id="degree-enabled" type="checkbox">
+                <span>ディグリー表記</span>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section id="section-editor-panel" class="editor-card section-editor" role="tabpanel">
+          <div class="card-heading">
+            <div>
+              <h2>セクション</h2>
+            </div>
+            <button id="add-section" type="button" class="button compact primary">＋ セクション追加</button>
+          </div>
+          <div id="sections-editor"></div>
+        </section>
+      </aside>
+
+      <section class="preview-panel" aria-label="印刷プレビュー">
+        <div class="preview-toolbar">
+          <div>
+            <p class="step-label">印刷プレビュー</p>
+            <strong>A4・縦</strong>
+          </div>
+        </div>
+        <article id="sheet" class="sheet"></article>
+      </section>
+    </main>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script src="app.js"></script>
+  </body>
+</html>
