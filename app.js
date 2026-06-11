@@ -720,10 +720,6 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
     const isSectionLastBar = sectionIndex === sectionBars.length - 1;
     const previousEnding = endingLabel(previousBar);
     const nextEnding = endingLabel(nextBar);
-    const directions = [
-      bar.fine ? "Fine" : "",
-      bar.dc ? "D.C." : ""
-    ].filter(Boolean).join("  ");
     const slotCount = Math.max(bar.chords?.length || 1, 1);
     const chordAreaX = x + inlineChange.width;
     const chordAreaWidth = Math.max(barWidth - inlineChange.width, barWidth * .42);
@@ -737,9 +733,7 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
       ${index > 0 && hasInlineChange ? doubleBarLine(x, staffTop, lineGap) : ""}
       ${inlineChange.html}
       ${ending ? endingBracket(x, endX, ending, previousEnding === ending, nextEnding === ending, STAFF_VERTICAL_SHIFT + ENDING_BRACKET_SHIFT, !bar.endingText) : ""}
-      ${directions ? `<text x="675" y="96" text-anchor="end" font-family="${SVG_FONT}" font-size="14" font-style="italic">${escapeHtml(directions)}</text>` : ""}
-      ${bar.ds ? `<text x="${endX - 6}" y="96" text-anchor="end" font-family="${SVG_FONT}" font-size="14" font-style="italic">D.S.</text>` : ""}
-      ${bar.toCoda ? toCodaText(endX - 6, 96) : ""}
+      ${barNavigationDirections(bar, endX)}
       ${bar.segno ? segnoSymbol() : ""}
       ${bar.coda ? codaSymbol() : ""}
       ${bar.repeatStart ? repeatSymbol(x, "start", staffTop, lineGap) : ""}
@@ -863,6 +857,26 @@ function toCodaText(x, y) {
     <text x="${x - 17}" y="${y}" text-anchor="end" font-family="${SVG_FONT}" font-size="14" font-style="italic">to</text>
     <text x="${x}" y="${y + 1}" text-anchor="end" font-family="${SVG_FONT}" font-size="15" font-weight="400">\uE048</text>
   `;
+}
+
+function navigationLabel(text, x, y) {
+  return `<text x="${x}" y="${y}" text-anchor="end" font-family="${SVG_FONT}" font-size="14" font-style="italic">${text}</text>`;
+}
+
+// Fine, D.C., D.S., and to Coda all sit at the bar's bottom-right. When more than
+// one is set on the same bar, lay them out right-to-left so the labels never overlap.
+function barNavigationDirections(bar, endX, y = 96) {
+  const items = [];
+  if (bar.fine) items.push({ width: 30, render: (right) => navigationLabel("Fine", right, y) });
+  if (bar.toCoda) items.push({ width: 32, render: (right) => toCodaText(right, y) });
+  if (bar.ds) items.push({ width: 26, render: (right) => navigationLabel("D.S.", right, y) });
+  if (bar.dc) items.push({ width: 26, render: (right) => navigationLabel("D.C.", right, y) });
+  let right = endX - 6;
+  return items.map((item) => {
+    const html = item.render(right);
+    right -= item.width + 6;
+    return html;
+  }).join("");
 }
 
 function segnoSymbol() {
