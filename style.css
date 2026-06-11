@@ -916,7 +916,7 @@ summary:focus-visible {
 .sheet-section { break-inside: avoid; }
 
 .section-heading {
-  margin: 2.5mm 0 .3mm;
+  margin: 2mm 0 .3mm;
   display: flex;
   align-items: center;
   gap: 2.5mm;
@@ -938,7 +938,7 @@ summary:focus-visible {
   font: 600 8pt/1.2 var(--font-sans);
 }
 
-.staff-row { margin-bottom: 2mm; break-inside: avoid; }
+.staff-row { margin-bottom: 1.5mm; break-inside: avoid; }
 .staff-svg { display: block; width: 100%; height: auto; overflow: visible; }
 
 .empty-sheet {
