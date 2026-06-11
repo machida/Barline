@@ -310,6 +310,33 @@ test("renders coda, segno, and to Coda symbols with Bravura glyphs", () => {
   assert.match(app.toCodaText(200, 96), /\uE048|/);
 });
 
+test("stacks Fine, D.C., D.S., and to Coda at the bar bottom-right without overlap", () => {
+  const app = loadApp();
+
+  const single = app.renderStaffRow([{ chords: [{ text: "C" }], dc: true }], "C", "4/4").html;
+  assert.match(single, /D\.C\./);
+
+  const all = app.renderStaffRow(
+    [{ chords: [{ text: "C" }], fine: true, dc: true, ds: true, toCoda: true }],
+    "C",
+    "4/4"
+  ).html;
+  assert.match(all, /Fine/);
+  assert.match(all, /D\.C\./);
+  assert.match(all, /D\.S\./);
+  assert.match(all, />to<\/text>/);
+
+  const xOf = (label) => Number(all.match(new RegExp(`<text x="([\\d.]+)"[^>]*>${label}<`))[1]);
+  const fineX = xOf("Fine");
+  const dcX = xOf("D\\.C\\.");
+  const dsX = xOf("D\\.S\\.");
+  const toX = xOf("to");
+  // Each direction is right-aligned and shifted left of the previous, so all four differ.
+  assert.equal(new Set([fineX, toX, dsX, dcX]).size, 4);
+  // Layout order is right-to-left: Fine (rightmost), to Coda, D.S., D.C.
+  assert.ok(dcX < dsX && dsX < toX && toX < fineX);
+});
+
 test("renders section heading without continuation marker", () => {
   const app = loadApp();
   const heading = app.renderSectionHeading({ label: "C", note: "memo" });

@@ -1,0 +1,214 @@
+{
+  "title": "SAD SONG",
+  "artist": "ちゃんみな feat. No No Girls FINALISTS / THE FIRST TAKE",
+  "key": "D",
+  "tempo": 120,
+  "timeSignature": "4/4",
+  "accidentalPreference": "flat",
+  "degreeNotation": false,
+  "transpose": { "enabled": false, "semitones": 0 },
+  "sections": [
+    {
+      "label": "Intro",
+      "note": "guitar only",
+      "bars": [
+        { "chords": [{ "text": "FAFCG" }, { "text": "FCAF" }, { "text": "CGFC" }, { "text": "EFGC" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "-" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "note": "all in (mp)",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }, { "text": "Am7" }] },
+        { "chords": [{ "text": "Gm7" }, { "text": "Am7" }] },
+        { "chords": [{ "text": "B♭add9" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "note": "all in (mf)",
+      "bars": [
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "Aメロ",
+      "note": "",
+      "bars": [
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "Bメロ",
+      "note": "dr fill",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "Dm7" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "note": "all in (f)",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "Gm7" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "N.C." }] }
+      ]
+    },
+    {
+      "label": "間奏",
+      "note": "",
+      "bars": [
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "Aメロ",
+      "note": "all in (mp)",
+      "bars": [
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "Bメロ",
+      "note": "all in (mf) / dr fill",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "Dm7" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "note": "all in (f)",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "Gm7" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "ブリッジ",
+      "note": "",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Am" }, { "text": "A♭m" }] },
+        { "chords": [{ "text": "Gm" }] },
+        { "chords": [{ "text": "A7" }] }
+      ]
+    },
+    {
+      "label": "Cメロ",
+      "note": "all in (mp)",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }, { "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }, { "text": "Am7" }, { "text": "Dm7" }] }
+      ]
+    },
+    {
+      "label": "",
+      "note": "crescendo",
+      "bars": [
+        { "chords": [{ "text": "Gm7" }, { "text": "Am" }] },
+        { "chords": [{ "text": "B♭" }, { "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "note": "all in (f)",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "Gm7" }] },
+        { "chords": [{ "text": "Am7" }] },
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Csus4" }] }
+      ]
+    },
+    {
+      "label": "Outro",
+      "note": "",
+      "bars": [
+        { "chords": [{ "text": "B♭add9" }] },
+        { "chords": [{ "text": "Am" }, { "text": "A♭m" }] },
+        { "chords": [{ "text": "Gm" }, { "text": "Am7" }] },
+        { "chords": [{ "text": "Dm7" }, { "text": "Csus4" }] },
+        { "chords": [{ "text": "B♭" }, { "text": "B♭" }, { "text": "N.C." }] }
+      ]
+    },
+    {
+      "label": "サビ",
+      "note": "all in (mp)",
+      "bars": [
+        { "chords": [{ "text": "N.C." }] },
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }] },
+        { "chords": [{ "text": "Dm7" }] },
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }, { "text": "F" }] },
+        { "chords": [{ "text": "B♭add9" }, { "text": "Csus4" }, { "text": "Dm7" }, { "text": "Am7" }] },
+        { "chords": [{ "text": "Gm7" }, { "text": "Am" }] },
+        { "chords": [{ "text": "B♭" }] },
+        { "chords": [{ "text": "F" }], "fine": true }
+      ]
+    }
+  ]
+}
