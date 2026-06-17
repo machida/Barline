@@ -39,6 +39,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: "Barline Directions Serif";
+  src: url("assets/noto-serif-800.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 800;
+  font-display: swap;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -845,8 +853,9 @@ summary:focus-visible {
 .sheet-page {
   position: relative;
   width: 210mm;
-  min-height: 297mm;
-  padding: 15mm 8mm 10mm;
+  height: 297mm;
+  padding: 10mm 8mm 9mm;
+  overflow: hidden;
   color: #111;
   background: var(--paper);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .35), 0 18px 42px -16px rgba(0, 0, 0, .65);
@@ -861,7 +870,6 @@ summary:focus-visible {
 }
 
 .sheet-header {
-  min-height: 23mm;
   padding-bottom: 4mm;
   border-bottom: 1.5px solid #111;
 }
@@ -912,33 +920,96 @@ summary:focus-visible {
   text-transform: uppercase;
 }
 
-.sheet-content { padding-top: 4mm; }
+.sheet-content { padding-top: 0; }
 .sheet-section { break-inside: avoid; }
 
 .section-heading {
-  margin: 2mm 0 .3mm;
+  margin: 11mm 0 .1mm;
   display: flex;
   align-items: center;
   gap: 2.5mm;
   break-after: avoid;
 }
 
+.sheet-content > .sheet-section:first-child .section-heading {
+  margin-top: 0;
+}
+
+.staff-row {
+  position: relative;
+  margin-top: 2.8mm;
+  margin-bottom: 3.6mm;
+  break-inside: avoid;
+}
+
+.staff-row.has-inline-mark-row { margin-top: 11mm; }
+
+.section-inline-mark {
+  position: absolute;
+  top: -5mm;
+  min-height: 8mm;
+  display: flex;
+  align-items: center;
+  gap: 2.5mm;
+  z-index: 1;
+}
+
+.top-lane-symbol {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 7mm;
+  height: 8mm;
+  margin-left: 1mm;
+  font-family: var(--font-music);
+  font-size: 24px;
+  line-height: 1;
+}
+
+.top-lane-symbol-segno {
+  position: relative;
+  top: 1.5mm;
+}
+
+.top-lane-symbol-coda {
+  position: relative;
+  top: 2mm;
+}
+
+.section-inline-mark.top-lane-symbol-only {
+  gap: 0;
+}
+
+.section-inline-mark.top-lane-symbol-only .top-lane-symbol {
+  margin-left: 0;
+}
+
+.staff-svg .direction-text {
+  font-family: "Barline Directions Serif", "Barline Noto Serif", serif;
+  font-weight: 800;
+  font-style: normal;
+}
+
 .rehearsal-mark {
   width: fit-content;
   min-width: 10mm;
+  min-height: 6mm;
   margin: 0;
   padding: .7mm 2mm;
   border: 1.5px solid #111;
+  background: #fff;
   font: 900 9pt/1 var(--font-sans);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
 }
 
 .section-note-preview {
   margin: 0;
   font: 600 8pt/1.2 var(--font-sans);
+  line-height: 1.2;
 }
-
-.staff-row { margin-bottom: 1.5mm; break-inside: avoid; }
 .staff-svg { display: block; width: 100%; height: auto; overflow: visible; }
 
 .empty-sheet {
@@ -971,6 +1042,11 @@ summary:focus-visible {
 @page { size: A4 portrait; margin: 8mm 6mm; }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
   body { min-width: 0; background: white; }
   .app-header, .editor-panel, .preview-toolbar, .toast, .app-footer { display: none !important; }
   .workspace { display: block; min-height: 0; }
@@ -981,13 +1057,21 @@ summary:focus-visible {
     display: block;
   }
   .sheet-page {
-    width: auto;
-    min-height: 0;
+    width: 210mm;
+    height: 297mm;
     margin: 0;
-    padding: 0;
+    padding: 10mm 8mm 9mm;
+    overflow: hidden;
+    box-shadow: none;
+    box-sizing: border-box;
+    page-break-after: always;
+    page-break-inside: avoid;
     box-shadow: none;
     break-after: page;
   }
-  .sheet-page:last-child { break-after: auto; }
-  .page-number { right: 0; bottom: -7mm; }
+  .sheet-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+  .page-number { right: 8mm; bottom: 4mm; }
 }

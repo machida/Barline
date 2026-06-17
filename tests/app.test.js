@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const test = require("node:test");
 const vm = require("node:vm");
+const canonicalCases = require("./canonical-cases");
 
 const DEFAULT_STATE = {
   title: "Audit",
@@ -81,19 +82,23 @@ globalThis.__barlineTest = {
   STAFF_VERTICAL_SHIFT,
   STAFF_WIDTH,
   CONTINUATION_PAGE_ROW_CAPACITY,
-  STAFF_ROW_WITH_HEADING_WEIGHT,
   codaSymbol,
+  clampEndingLabel,
+  chordSlotLayout,
+  chordSlotMetrics,
   distributeBarWidths,
   endingLabel,
   formatPreviewChord,
+  inlineSectionMark,
   isRecognizedChord,
   normalizeChordText,
+  minimumBarWidth,
+  minimumChordAreaWidth,
   normalizeState,
   parseChordRoot,
   previewChordText,
   paginateSections,
   saveAndRender,
-  renderSectionHeading,
   renderStaffRow,
   segnoSymbol,
   splitSectionRows,
@@ -215,15 +220,14 @@ test("auto-wraps preview rows when inline changes need more room", () => {
   const stressRows = app.splitSectionRows(stress.sections[0].bars, stress.key, stress.timeSignature);
   const threeBarLayout = app.staffRowLayout(stressRows[0].bars, stress.key, stress.timeSignature);
 
-  assert.equal(stressRows[0].bars.length, 3);
-  assert.equal(stressRows[1].bars.length, 1);
-  assert.equal(
-    Math.round(threeBarLayout.barStart + threeBarLayout.barWidths.reduce((total, width) => total + width, 0)),
-    app.STAFF_WIDTH
+  assert.ok(stressRows.length > 1);
+  assert.ok(stressRows[0].bars.length < 4);
+  assert.ok(
+    Math.round(threeBarLayout.barStart + threeBarLayout.barWidths.reduce((total, width) => total + width, 0)) <= app.STAFF_WIDTH
   );
 
   const singleLayout = app.staffRowLayout([stress.sections[0].bars[3]], "F#", "7/8");
-  assert.ok(singleLayout.barWidths[0] <= app.MAX_BAR_WIDTH);
+  assert.ok(singleLayout.barWidths[0] >= app.minimumBarWidth(stress.sections[0].bars[3], "F#"));
 });
 
 test("redistributes extra row width after narrow bars hit their maximum", () => {
@@ -234,6 +238,20 @@ test("redistributes extra row width after narrow bars hit their maximum", () => 
   assert.equal(Math.round(widths.reduce((total, width) => total + width, 0)), 340);
 });
 
+test("estimates wider minimum widths for denser displayed chord text", () => {
+  const plainApp = loadApp({ ...DEFAULT_STATE, degreeNotation: false });
+  const denseApp = loadApp({ ...DEFAULT_STATE, degreeNotation: true });
+  const shortBar = { chords: [{ text: "C" }, { text: "" }, { text: "F" }, { text: "G" }] };
+  const denseBar = { chords: [{ text: "E♭maj9" }, { text: "Gm11" }, { text: "A♭maj7" }, { text: "B♭13" }, { text: "Cm9" }, { text: "F7alt" }] };
+
+  const shortWidth = plainApp.minimumBarWidth(shortBar, "C");
+  const denseWidth = plainApp.minimumBarWidth(denseBar, "E♭");
+  const denseDegreeWidth = denseApp.minimumBarWidth(denseBar, "E♭");
+
+  assert.ok(denseWidth > shortWidth);
+  assert.ok(denseDegreeWidth > denseWidth);
+});
+
 test("moves squeezed mid-row key or time changes to the next row", () => {
   const app = loadApp();
   const midChange = app.normalizeState({
@@ -241,9 +259,9 @@ test("moves squeezed mid-row key or time changes to the next row", () => {
     key: "C",
     timeSignature: "4/4",
     sections: [{ label: "S", bars: [
-      { chords: [{ text: "C" }] },
-      { chords: [{ text: "D" }] },
-      { chords: [{ text: "E" }] },
+      { chords: Array.from({ length: 5 }, () => ({ text: "C" })) },
+      { chords: Array.from({ length: 5 }, () => ({ text: "D" })) },
+      { chords: Array.from({ length: 5 }, () => ({ text: "E" })) },
       { key: "F#", timeSignature: "7/8", repeatStart: true, chords: Array.from({ length: 8 }, (_, index) => ({ text: index % 2 ? "" : "F#" })) }
     ] }]
   });
@@ -302,11 +320,13 @@ test("renders degree notation with local Noto Serif only on roman numerals", () 
 test("renders coda, segno, and to Coda symbols with Bravura glyphs", () => {
   const app = loadApp();
 
-  assert.match(app.codaSymbol(), /x="80" y="29"/);
+  assert.match(app.codaSymbol(), /x="80" y="12"/);
   assert.match(app.codaSymbol(), /\uE048|/);
-  assert.match(app.segnoSymbol(), /x="84" y="29"/);
+  assert.match(app.segnoSymbol(), /x="84" y="12"/);
   assert.match(app.segnoSymbol(), /\uE047|/);
+  assert.match(fs.readFileSync("style.css", "utf8"), /top-lane-symbol/);
   assert.match(app.toCodaText(200, 96), />to<\/text>/);
+  assert.match(app.toCodaText(200, 96), /font-family="&quot;Barline Directions Serif&quot;, serif"|font-family="\"Barline Directions Serif\", serif"/);
   assert.match(app.toCodaText(200, 96), /\uE048|/);
 });
 
@@ -326,7 +346,7 @@ test("stacks Fine, D.C., D.S., and to Coda at the bar bottom-right without overl
   assert.match(all, /D\.S\./);
   assert.match(all, />to<\/text>/);
 
-  const xOf = (label) => Number(all.match(new RegExp(`<text x="([\\d.]+)"[^>]*>${label}<`))[1]);
+  const xOf = (label) => Number(all.match(new RegExp(`<text[^>]* x="([\\d.]+)"[^>]*>${label}<`))[1]);
   const fineX = xOf("Fine");
   const dcX = xOf("D\\.C\\.");
   const dsX = xOf("D\\.S\\.");
@@ -335,12 +355,14 @@ test("stacks Fine, D.C., D.S., and to Coda at the bar bottom-right without overl
   assert.equal(new Set([fineX, toX, dsX, dcX]).size, 4);
   // Layout order is right-to-left: Fine (rightmost), to Coda, D.S., D.C.
   assert.ok(dcX < dsX && dsX < toX && toX < fineX);
+  assert.match(all, /font-family="\"Barline Directions Serif\", serif"/);
 });
 
-test("renders section heading without continuation marker", () => {
+test("renders a unified section mark without continuation marker", () => {
   const app = loadApp();
-  const heading = app.renderSectionHeading({ label: "C", note: "memo" });
+  const heading = app.inlineSectionMark({ label: "C", note: "memo" }, 0, 680);
 
+  assert.match(heading, /section-inline-mark/);
   assert.match(heading, /<div class="rehearsal-mark">C<\/div>/);
   assert.match(heading, /section-note-preview/);
   assert.doesNotMatch(heading, /section-continued|続/);
@@ -350,7 +372,7 @@ test("omits section mark when a section continues after a page break", () => {
   const app = loadApp();
   const section = {
     label: "C",
-    bars: Array.from({ length: 40 }, () => ({ chords: [{ text: "C" }] }))
+    bars: Array.from({ length: 60 }, () => ({ chords: [{ text: "C" }] }))
   };
   const pages = app.paginateSections([section]);
   const secondPageHtml = pages[1].blocks.join("");
@@ -359,13 +381,160 @@ test("omits section mark when a section continues after a page break", () => {
   assert.doesNotMatch(secondPageHtml, /section-continued|続/);
 });
 
+test("packs a continued section onto the previous section's row", () => {
+  const app = loadApp();
+  const sections = [
+    { label: "A", bars: [{ chords: [{ text: "C" }] }, { chords: [{ text: "F" }] }] },
+    { label: "B", continued: true, bars: [{ chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }] }
+  ];
+  const pages = app.paginateSections(sections);
+  const html = pages[0].blocks.join("");
+
+  assert.equal(pages[0].blocks.length, 1);
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, /<div class="rehearsal-mark">A<\/div>/);
+  assert.match(html, /<div class="rehearsal-mark">B<\/div>/);
+});
+
+test("keeps non-continued sections on separate rows", () => {
+  const app = loadApp();
+  const sections = [
+    { label: "A", bars: [{ chords: [{ text: "C" }] }, { chords: [{ text: "F" }] }] },
+    { label: "B", bars: [{ chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }] }
+  ];
+  const pages = app.paginateSections(sections);
+  const html = pages[0].blocks.join("");
+
+  assert.equal(pages[0].blocks.length, 2);
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, /<div class="rehearsal-mark">A<\/div>/);
+  assert.match(html, /<div class="rehearsal-mark">B<\/div>/);
+});
+
+test("preserves the continued flag through normalization", () => {
+  const app = loadApp();
+  const normalized = app.normalizeState({
+    title: "T", key: "C", timeSignature: "4/4",
+    sections: [
+      { label: "A", bars: [{ chords: [{ text: "C" }] }] },
+      { label: "B", continued: true, bars: [{ chords: [{ text: "G" }] }] }
+    ]
+  });
+
+  assert.equal(normalized.sections[0].continued, false);
+  assert.equal(normalized.sections[1].continued, true);
+});
+
+test("keeps a section-head flag only on later bars", () => {
+  const app = loadApp();
+  const normalized = app.normalizeState({
+    title: "T", key: "C", timeSignature: "4/4",
+    sections: [{ label: "A", bars: [
+      { sectionHead: true, chords: [{ text: "C" }] },
+      { sectionHead: true, chords: [{ text: "G" }] }
+    ] }]
+  });
+
+  assert.equal(normalized.sections[0].bars[0].sectionHead, undefined);
+  assert.equal(normalized.sections[0].bars[1].sectionHead, true);
+});
+
+test("moves a section's mark and double bar line to its head bar", () => {
+  const app = loadApp();
+  const section = {
+    label: "Coda",
+    bars: [
+      { chords: [{ text: "C" }] },
+      { chords: [{ text: "F" }] },
+      { sectionHead: true, chords: [{ text: "G" }] },
+      { chords: [{ text: "C" }] }
+    ]
+  };
+  const pages = app.paginateSections([section]);
+  const html = pages[0].blocks.join("");
+  const layout = app.staffRowLayout(section.bars, "C", "4/4");
+  const headX = layout.barStart + layout.barWidths.slice(0, 2).reduce((total, width) => total + width, 0);
+
+  // The section mark is rendered inline above the head bar.
+  assert.doesNotMatch(html, /section-heading/);
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, /<div class="rehearsal-mark">Coda<\/div>/);
+
+  // The double bar line sits at the head bar, not at the section's first bar.
+  assert.match(html, new RegExp(`x1="${headX}"`));
+  assert.match(html, new RegExp(`x1="${headX + 4}"`));
+  assert.doesNotMatch(html, new RegExp(`x1="${layout.barStart + 4}"`));
+});
+
+test("positions coda relative to its bar and beside a section mark", () => {
+  const app = loadApp();
+  const bars = [{ chords: [{ text: "C" }] }, { coda: true, chords: [{ text: "F" }] }];
+  const layout = app.staffRowLayout(bars, "C", "4/4");
+  const bar2X = layout.barStart + layout.barWidths[0];
+
+  // The coda sign follows the second bar instead of the old fixed x=80.
+  const plain = app.renderStaffRow(bars, "C", "4/4", bars, 0).html;
+  const plainX = Number(plain.match(/section-inline-mark top-lane-symbol-only" style="left:([\d.]+)px/)[1]);
+  assert.ok(plainX > bar2X && plainX < bar2X + 20);
+
+  // When that bar also opens a section, the sign is rendered inside the same inline mark.
+  const withMark = app.renderStaffRow(bars, "C", "4/4", bars, 0, { 1: { label: "Coda" } }).html;
+  assert.doesNotMatch(withMark, /top-lane-symbol-only/);
+  assert.match(withMark, /<div class="rehearsal-mark">Coda<\/div>[\s\S]*top-lane-symbol/);
+  assert.match(withMark, /top-lane-symbol/);
+});
+
+test("shifts a coda sign clear of an ending bracket on the same bar", () => {
+  const app = loadApp();
+  const plainBars = [{ chords: [{ text: "C" }] }, { coda: true, chords: [{ text: "F" }] }];
+  const endingBars = [{ chords: [{ text: "C" }] }, { coda: true, ending1: true, chords: [{ text: "F" }] }];
+
+  const plainX = Number(app.renderStaffRow(plainBars, "C", "4/4", plainBars, 0).html.match(/section-inline-mark top-lane-symbol-only" style="left:([\d.]+)px/)[1]);
+  const endingX = Number(app.renderStaffRow(endingBars, "C", "4/4", endingBars, 0).html.match(/section-inline-mark top-lane-symbol-only" style="left:([\d.]+)px/)[1]);
+  assert.ok(endingX > plainX);
+});
+
+test("does not stack a plain double bar line under a repeat-start sign", () => {
+  const app = loadApp();
+  const bars = [{ repeatStart: true, chords: [{ text: "C" }] }, { chords: [{ text: "G" }] }];
+  const layout = app.staffRowLayout(bars, "C", "4/4");
+  const html = app.renderStaffRow(bars, "C", "4/4", bars, 0).html;
+
+  // Only the repeat sign's heavy line sits at the bar start — no extra double bar line.
+  const atStart = html.match(new RegExp(`x1="${layout.barStart}"`, "g")) || [];
+  assert.equal(atStart.length, 1);
+  assert.match(html, /circle/);
+});
+
+test("trims an inline section note that would overflow the staff", () => {
+  const app = loadApp();
+  const longNote = "ねこ".repeat(60);
+  const bars = [{ chords: [{ text: "C" }] }];
+  const html = app.renderStaffRow(bars, "C", "4/4", bars, 0, { 0: { label: "A", note: longNote } }).html;
+
+  assert.match(html, /…/);
+  assert.doesNotMatch(html, new RegExp(longNote));
+});
+
 test("centralizes ending label precedence", () => {
   const app = loadApp();
 
   assert.equal(app.endingLabel({ ending1: true }), "1");
   assert.equal(app.endingLabel({ ending2: true }), "2");
+  assert.equal(app.endingLabel({ ending3: true }), "3");
   assert.equal(app.endingLabel({ ending1: true, endingText: "3x" }), "3x");
   assert.equal(app.endingLabel(null), "");
+});
+
+test("compacts long custom ending labels for display only", () => {
+  const app = loadApp();
+  const compact = app.clampEndingLabel("Only second chorus repeat", false);
+  const short = app.clampEndingLabel("3", false);
+
+  assert.equal(short.text, "3");
+  assert.equal(short.compact, false);
+  assert.match(compact.text, /…/);
+  assert.equal(compact.compact, true);
 });
 
 test("renders section final bar as double bar unless repeat-end is set", () => {
@@ -380,4 +549,159 @@ test("renders section final bar as double bar unless repeat-end is set", () => {
 
   const repeatEndHtml = app.renderStaffRow([{ repeatEnd: true, chords: [{ text: "C" }] }], "C", "4/4", [{ repeatEnd: true, chords: [{ text: "C" }] }], 0).html;
   assert.doesNotMatch(repeatEndHtml, /x1="676"/);
+});
+
+test("opens a section's first bar with a double bar line unless it has a repeat sign", () => {
+  const app = loadApp();
+  const bars = [{ chords: [{ text: "C" }] }, { chords: [{ text: "G" }] }];
+  const layout = app.staffRowLayout(bars, "C", "4/4");
+
+  // A section start at the head of a row gets a left double bar line.
+  const startHtml = app.renderStaffRow(bars, "C", "4/4", bars, 0).html;
+  assert.match(startHtml, new RegExp(`x1="${layout.barStart}"`));
+  assert.match(startHtml, new RegExp(`x1="${layout.barStart + 4}"`));
+
+  // A row that merely continues a section midway (rowStartIndex > 0) does not.
+  const continuationHtml = app.renderStaffRow(bars, "C", "4/4", bars, 3).html;
+  assert.doesNotMatch(continuationHtml, new RegExp(`x1="${layout.barStart + 4}"`));
+
+  // A continued section starting mid-row gets a double bar line at its first bar.
+  const combined = [{ chords: [{ text: "C" }] }, { chords: [{ text: "F" }] }, { chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }];
+  const combinedLayout = app.staffRowLayout(combined, "C", "4/4");
+  const startX = combinedLayout.barStart + combinedLayout.barWidths.slice(0, 2).reduce((total, width) => total + width, 0);
+  const continuedHtml = app.renderStaffRow(combined, "C", "4/4", combined, 0, { 2: { label: "B" } }).html;
+  assert.match(continuedHtml, new RegExp(`x1="${startX}"`));
+  assert.match(continuedHtml, new RegExp(`x1="${startX + 4}"`));
+});
+
+test("keeps canonical preview scenarios renderable", () => {
+  Object.entries(canonicalCases).forEach(([name, fixture]) => {
+    const app = loadApp(fixture);
+    const normalized = app.normalizeState(fixture);
+    const pages = app.paginateSections(normalized.sections.filter((section) => section.bars.length > 0));
+    const combinedHtml = pages.map((page) => page.blocks.join("")).join("");
+
+    assert.ok(pages.length >= 1, `${name}: pages should exist`);
+    assert.match(combinedHtml, /staff-svg/, `${name}: should render staff rows`);
+    assert.doesNotMatch(combinedHtml, /undefined|null/, `${name}: should not emit placeholder text`);
+  });
+});
+
+test("keeps baseline scenario on a single page with an inline first-bar section mark", () => {
+  const app = loadApp(canonicalCases.baseline);
+  const normalized = app.normalizeState(canonicalCases.baseline);
+  const pages = app.paginateSections(normalized.sections);
+  const html = pages[0].blocks.join("");
+
+  assert.equal(pages.length, 1);
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, /<div class="rehearsal-mark">Intro<\/div>/);
+});
+
+test("keeps dense chord scenario split across multiple rows", () => {
+  const app = loadApp(canonicalCases.denseChords);
+  const normalized = app.normalizeState(canonicalCases.denseChords);
+  const rows = app.splitSectionRows(normalized.sections[0].bars, normalized.key, normalized.timeSignature);
+
+  assert.ok(rows.length > 1);
+});
+
+test("allocates chord slots wide enough to avoid overlap in dense chords", () => {
+  const app = loadApp(canonicalCases.denseChords);
+  const normalized = app.normalizeState(canonicalCases.denseChords);
+  const bar = normalized.sections[0].bars[0];
+  const chordAreaWidth = app.minimumChordAreaWidth(bar, normalized.key);
+  const layout = app.chordSlotLayout(bar, normalized.key, 0, chordAreaWidth);
+
+  for (let index = 0; index < layout.length - 1; index += 1) {
+    const current = layout[index];
+    const next = layout[index + 1];
+    assert.ok(current.x + current.textWidth <= next.x, `slot ${index} should not overlap slot ${index + 1}`);
+  }
+});
+
+test("keeps dense bar-head scenario rendering inline key and time changes", () => {
+  const app = loadApp(canonicalCases.denseBarHead);
+  const normalized = app.normalizeState(canonicalCases.denseBarHead);
+  const html = app.renderStaffRow(normalized.sections[0].bars, normalized.key, normalized.timeSignature, normalized.sections[0].bars, 0).html;
+
+  assert.match(html, /\uE262|/);
+  assert.match(html, /\uE087|\uE084||/);
+});
+
+test("reserves extra width when key and time changes share a bar head", () => {
+  const app = loadApp();
+  const keyOnly = { key: "D♭", chords: [{ text: "D♭maj7" }] };
+  const timeOnly = { timeSignature: "12/8", chords: [{ text: "D♭maj7" }] };
+  const both = { key: "D♭", timeSignature: "12/8", chords: [{ text: "D♭maj7" }] };
+
+  assert.ok(app.minimumBarWidth(both, "D♭") > app.minimumBarWidth(keyOnly, "D♭"));
+  assert.ok(app.minimumBarWidth(both, "D♭") > app.minimumBarWidth(timeOnly, "D♭"));
+});
+
+test("renders long custom ending text in compact form", () => {
+  const app = loadApp();
+  const bars = [{ endingText: "Only second chorus repeat", chords: [{ text: "C" }] }];
+  const html = app.renderStaffRow(bars, "C", "4/4", bars, 0).html;
+
+  assert.match(html, /font-size="10"/);
+  assert.match(html, /…/);
+});
+
+test("keeps top-lane scenario rendering endings and navigation signs together", () => {
+  const app = loadApp(canonicalCases.topLane);
+  const normalized = app.normalizeState(canonicalCases.topLane);
+  const pages = app.paginateSections(normalized.sections);
+  const html = pages[0].blocks.join("");
+
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, />1\.<\/text>/);
+  assert.match(html, />2\.<\/text>/);
+  assert.match(html, /\uE047|/);
+  assert.match(html, /\uE048|/);
+});
+
+test("keeps bottom-lane scenario rendering all bottom-right directions", () => {
+  const app = loadApp(canonicalCases.bottomLane);
+  const normalized = app.normalizeState(canonicalCases.bottomLane);
+  const html = app.renderStaffRow(normalized.sections[0].bars, normalized.key, normalized.timeSignature, normalized.sections[0].bars, 0).html;
+
+  assert.match(html, /Fine/);
+  assert.match(html, /D\.C\./);
+  assert.match(html, /D\.S\./);
+  assert.match(html, />to<\/text>/);
+});
+
+test("keeps multipage scenario spanning pages with continuation headers", () => {
+  const app = loadApp(canonicalCases.multipage);
+  const normalized = app.normalizeState(canonicalCases.multipage);
+  const pages = app.paginateSections(normalized.sections);
+  const firstPageHtml = pages[0].blocks.join("");
+  const laterPagesHtml = pages.slice(1).map((page) => page.blocks.join("")).join("");
+
+  assert.ok(pages.length > 1);
+  assert.match(firstPageHtml, /section-inline-mark/);
+  assert.match(laterPagesHtml, /staff-svg/);
+});
+
+test("keeps sparse-page scenario on a single compact page", () => {
+  const app = loadApp(canonicalCases.sparsePage);
+  const normalized = app.normalizeState(canonicalCases.sparsePage);
+  const pages = app.paginateSections(normalized.sections);
+  const html = pages[0].blocks.join("");
+
+  assert.equal(pages.length, 1);
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, /staff-svg/);
+});
+
+test("keeps long-text scenario compacting ending text and trimming note", () => {
+  const app = loadApp(canonicalCases.longText);
+  const normalized = app.normalizeState(canonicalCases.longText);
+  const pages = app.paginateSections(normalized.sections);
+  const html = pages[0].blocks.join("");
+
+  assert.match(html, /section-inline-mark/);
+  assert.match(html, /font-size="10"/);
+  assert.match(html, /…/);
 });

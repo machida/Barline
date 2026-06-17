@@ -40,15 +40,16 @@ const EMPTY_DATA = {
 
 const BAR_FLAGS = [
   ["repeatStart", "リピート開始"],
-  ["repeatEnd", "リピート終了"],
   ["ending1", "1カッコ"],
   ["ending2", "2カッコ"],
+  ["ending3", "3カッコ"],
+  ["repeatEnd", "リピート終了"],
+  ["segno", "セーニョ記号"],
+  ["coda", "Coda記号"],
   ["toCoda", "to Coda"],
-  ["coda", "Coda"],
-  ["segno", "セーニョ"],
   ["fine", "Fine"],
-  ["dc", "D.C."],
-  ["ds", "D.S."]
+  ["ds", "D.S."],
+  ["dc", "D.C."]
 ];
 
 const SHARP_NOTES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -102,15 +103,27 @@ const DEFAULT_TEMPO = 120;
 const MIN_TEMPO = 20;
 const MAX_TEMPO = 400;
 const STAFF_WIDTH = 680;
-const STAFF_INFO_WIDTH = 100;
+// Header (clef/key/time) width is sized to the time signature's digit count so the
+// first bar starts just past it, instead of a fixed minimum that left dead space for
+// narrow keys. Roughly the rendered width of one time-signature glyph at font size 30.
+const TIME_SIGNATURE_DIGIT_WIDTH = 16;
+const TIME_SIGNATURE_RIGHT_MARGIN = 10;
 const MAX_BARS_PER_ROW = 4;
 const MIN_BAR_CONTENT_WIDTH = 112;
 const MAX_BAR_WIDTH = 178;
+const EMPTY_CHORD_SLOT_WIDTH = 8;
+const CHORD_SLOT_PADDING = 28;
+const CHORD_GAP_WIDTH = 7;
+const CHORD_CHAR_WIDTH = 5.4;
+const CHORD_SYMBOL_WIDTH = 4.2;
+const EXTRA_CHORD_SLOT_WIDTH = 13;
+const CHORD_SLOT_INNER_PADDING = 10;
+const INLINE_CHANGE_DOUBLE_STACK_PADDING = 12;
+const ENDING_TEXT_MAX_CHARS = 12;
+const ENDING_TEXT_COMPACT_FONT_SIZE = 10;
 // Page capacity is measured in staff-row units. Headings add fractional weight based on current print CSS.
-const FIRST_PAGE_ROW_CAPACITY = 7.6;
+const FIRST_PAGE_ROW_CAPACITY = 8;
 const CONTINUATION_PAGE_ROW_CAPACITY = 9;
-const STAFF_ROW_WEIGHT = 1;
-const STAFF_ROW_WITH_HEADING_WEIGHT = 1.3;
 const CHORD_FONT_SIZE = 10.5;
 const STAFF_VERTICAL_SHIFT = -6;
 const ENDING_BRACKET_SHIFT = -2;
@@ -122,6 +135,19 @@ const TIME_SIGNATURE_FONT_SIZE = 30;
 const SVG_FONT = "Bravura, Noto Sans JP, Noto Sans, system-ui, sans-serif";
 const TEXT_FONT = "Noto Sans JP, Noto Sans, system-ui, sans-serif";
 const SERIF_TEXT_FONT = "Barline Noto Serif, serif";
+const DIRECTION_TEXT_FONT = "\"Barline Directions Serif\", serif";
+const STAFF_ROW_BASE_HEIGHT = 80;
+const TOP_LANE_Y = 0;
+const TOP_LANE_SYMBOL_Y = 12;
+const CHORD_BASELINE_Y = 35 + STAFF_VERTICAL_SHIFT;
+const INLINE_ROW_MARK_LEFT = 0;
+const INLINE_SECTION_NOTE_CHAR_WIDTH = 4.2;
+const INLINE_SECTION_MARK_GAP = 6;
+const INLINE_SECTION_SIGN_GAP = 7;
+const INLINE_SECTION_SYMBOL_GAP = 8;
+const INLINE_SECTION_ENDING_CLEARANCE = 48;
+const NAVIGATION_BASELINE_Y = 84;
+const NAVIGATION_BOTTOM_LANE_Y = 92;
 
 let state = loadSavedState();
 let toastTimer;
@@ -224,6 +250,7 @@ function normalizeState(value) {
       return {
         label: String(section.label ?? ""),
         note: String(section.note ?? ""),
+        continued: Boolean(section.continued),
         bars: Array.isArray(section.bars) ? section.bars.map((bar, barIndex) => {
           const chords = normalizeChordSlots(bar);
           const result = { chords };
@@ -238,6 +265,7 @@ function normalizeState(value) {
             if (bar?.[flag]) result[flag] = true;
           });
           if (bar?.endingText) result.endingText = String(bar.endingText);
+          if (bar?.sectionHead && barIndex > 0) result.sectionHead = true;
           return result;
         }) : []
       };
@@ -255,7 +283,17 @@ function renderKeyOptions(selectedKey, preference = state.accidentalPreference) 
 
 function endingLabel(bar) {
   if (!bar) return "";
-  return bar.endingText || (bar.ending1 ? "1" : bar.ending2 ? "2" : "");
+  return bar.endingText || (bar.ending1 ? "1" : bar.ending2 ? "2" : bar.ending3 ? "3" : "");
+}
+
+function clampEndingLabel(ending, appendDot = true) {
+  const label = String(ending || "");
+  const dotted = appendDot ? `${label}.` : label;
+  if (label.length <= ENDING_TEXT_MAX_CHARS) {
+    return { text: dotted, compact: false };
+  }
+  const truncated = `${label.slice(0, ENDING_TEXT_MAX_CHARS - 1)}…`;
+  return { text: appendDot ? `${truncated}.` : truncated, compact: true };
 }
 
 function loadSavedState() {
@@ -435,6 +473,11 @@ function renderEditor() {
           </div>
         </div>
         <input class="section-note" type="text" value="${escapeHtml(section.note || "")}" aria-label="セクションメモ" placeholder="メモ（例: ここから歌）">
+        ${sectionIndex > 0 ? `
+        <label class="modulation-toggle section-continue-toggle">
+          <input class="section-continued" type="checkbox" ${section.continued ? "checked" : ""}>
+          <span>前のセクションに続けて表示</span>
+        </label>` : ""}
       </div>
       <div class="bars-editor">
         ${section.bars.map((bar, barIndex) => `
@@ -505,6 +548,11 @@ function renderEditor() {
                     ${TIME_SIGNATURES.map((time) => `<option ${time === bar.timeSignature ? "selected" : ""}>${time}</option>`).join("")}
                   </select>
                 </label>
+                ${barIndex > 0 ? `
+                <label class="modulation-toggle bar-section-head-toggle">
+                  <input class="bar-section-head" type="checkbox" ${bar.sectionHead ? "checked" : ""}>
+                  <span>セクション先頭（前は弱起）</span>
+                </label>` : ""}
               </div>
             </details>
           </div>
@@ -548,45 +596,127 @@ function renderSheet() {
   `).join("");
 }
 
+function groupSections(sections) {
+  const groups = [];
+  sections.forEach((section, index) => {
+    if (index === 0 || !section.continued || !groups.length) groups.push([section]);
+    else groups[groups.length - 1].push(section);
+  });
+  return groups;
+}
+
+// A section's head (where its rehearsal mark and double bar line sit) is normally its
+// first bar, but a bar marked `sectionHead` moves it later — e.g. a coda whose downbeat
+// follows a pickup bar. Bars before the head render as a lead-in with no section mark.
+function sectionHeadOffset(section) {
+  const index = section.bars.findIndex((bar) => bar.sectionHead);
+  return index > 0 ? index : 0;
+}
+
+// Sections marked `continued` share staff rows with the preceding section. A group
+// is the lead section plus its continued followers; their bars are concatenated so
+// the row splitter can pack them onto the same lines. Every section head is rendered
+// as the same inline mark above its head bar, including the group's first section.
+// `sectionStarts` collects the combined-bar offsets that open a section so the staff
+// can draw their double bar lines.
 function paginateSections(sections) {
   const pages = [{ blocks: [], used: 0, capacity: FIRST_PAGE_ROW_CAPACITY }];
   let effectiveKey = state.key;
   let effectiveTimeSignature = state.timeSignature;
 
-  sections.forEach((section) => {
-    const rows = splitSectionRows(section.bars, effectiveKey, effectiveTimeSignature);
+  groupSections(sections).forEach((group) => {
+    const leadSection = group[0];
+    const leadHeadOffset = sectionHeadOffset(leadSection);
+    const combinedBars = [];
+    const inlineMarks = {};
+    const sectionStarts = new Set();
+    group.forEach((section, memberIndex) => {
+      const headOffset = memberIndex === 0 ? leadHeadOffset : sectionHeadOffset(section);
+      const headIndex = combinedBars.length + headOffset;
+      sectionStarts.add(headIndex);
+      inlineMarks[headIndex] = section;
+      combinedBars.push(...section.bars);
+    });
+
+    const rows = splitSectionRows(combinedBars, effectiveKey, effectiveTimeSignature);
     rows.forEach(({ bars, startIndex }) => {
-      const renderedRow = renderStaffRow(bars, effectiveKey, effectiveTimeSignature, section.bars, startIndex);
+      const renderedRow = renderStaffRow(bars, effectiveKey, effectiveTimeSignature, combinedBars, startIndex, inlineMarks, sectionStarts);
       effectiveKey = renderedRow.effectiveKey;
       effectiveTimeSignature = renderedRow.effectiveTimeSignature;
 
       let page = pages[pages.length - 1];
-      const needsHeading = startIndex === 0;
-      const weight = needsHeading ? STAFF_ROW_WITH_HEADING_WEIGHT : STAFF_ROW_WEIGHT;
-      if (page.used > 0 && page.used + weight > page.capacity) {
+      if (page.used > 0 && page.used + 1 > page.capacity) {
         page = { blocks: [], used: 0, capacity: CONTINUATION_PAGE_ROW_CAPACITY };
         pages.push(page);
       }
-      const showHeading = startIndex === 0;
       page.blocks.push(`
         <section class="sheet-section">
-          ${showHeading ? renderSectionHeading(section) : ""}
           ${renderedRow.html}
         </section>
       `);
-      page.used += showHeading ? STAFF_ROW_WITH_HEADING_WEIGHT : STAFF_ROW_WEIGHT;
+      page.used += 1;
     });
   });
   return pages;
 }
 
-function renderSectionHeading(section) {
+// Boxed rehearsal mark drawn inside the staff SVG for a section that continues on a
+// shared row. It is lifted into the band above the staff (negative y) so it lines up
+// with the block rehearsal mark of the group's lead section rather than sitting low
+// over the chord text. Units: ~3.5 per mm, matching the 9pt/2mm-margin block heading.
+function sectionMarkWidth(section) {
+  const label = section.label || "Section";
+  return Math.max(label.length * 6.5 + 12, 28);
+}
+
+// The inline note is plain SVG text and cannot wrap, so trim it to the room left before
+// the staff ends (~5 units per character at font size 9) and drop it when there is none.
+function clampNoteText(note, availableWidth) {
+  const text = String(note || "").trim();
+  if (!text) return "";
+  const maxChars = Math.floor(availableWidth / 5);
+  if (maxChars < 3) return "";
+  return text.length > maxChars ? `${text.slice(0, maxChars - 1)}…` : text;
+}
+
+function estimatedInlineTextWidth(text, perCharacter = 5) {
+  return String(text || "").length * perCharacter;
+}
+
+function inlineSectionMarkOccupiedWidth(section, maxRight = STAFF_WIDTH) {
+  const boxWidth = sectionMarkWidth(section);
+  const noteText = clampNoteText(section.note, maxRight - (boxWidth + INLINE_SECTION_MARK_GAP));
+  return boxWidth + (noteText ? INLINE_SECTION_MARK_GAP + estimatedInlineTextWidth(noteText, INLINE_SECTION_NOTE_CHAR_WIDTH) : 0);
+}
+
+function sectionMarkContent(section, noteText = section.note, symbol = "") {
   return `
-    <div class="section-heading">
-      <div class="rehearsal-mark">${escapeHtml(section.label || "Section")}</div>
-      ${section.note ? `<p class="section-note-preview">${escapeHtml(section.note)}</p>` : ""}
+    <div class="rehearsal-mark">${escapeHtml(section.label || "Section")}</div>
+    ${symbol}
+    ${noteText ? `<p class="section-note-preview">${escapeHtml(noteText)}</p>` : ""}
+  `;
+}
+
+function topLaneSymbolMarkup(bar) {
+  if (bar?.segno) return '<span class="top-lane-symbol top-lane-symbol-segno" aria-hidden="true">\uE047</span>';
+  if (bar?.coda) return '<span class="top-lane-symbol top-lane-symbol-coda" aria-hidden="true">\uE048</span>';
+  return "";
+}
+
+function inlineSectionMark(section, x, maxRight = STAFF_WIDTH, bar = null) {
+  const noteText = clampNoteText(section.note, maxRight - (sectionMarkWidth(section) + INLINE_SECTION_MARK_GAP));
+  const symbol = topLaneSymbolMarkup(bar);
+  return `
+    <div class="section-inline-mark" style="left:${x}px;">
+      ${sectionMarkContent(section, noteText, symbol)}
     </div>
   `;
+}
+
+function standaloneTopLaneSymbol(bar, x) {
+  const symbol = topLaneSymbolMarkup(bar);
+  if (!symbol) return "";
+  return `<div class="section-inline-mark top-lane-symbol-only" style="left:${x}px;">${symbol}</div>`;
 }
 
 function splitSectionRows(sectionBars, initialKey, initialTimeSignature) {
@@ -622,19 +752,25 @@ function rowCanFit(bars, effectiveKey, effectiveTimeSignature) {
   const layout = staffRowLayout(bars, effectiveKey, effectiveTimeSignature);
   return layout.fits
     && layout.barWidths.every((width, index) => width >= minimumBarWidth(bars[index]))
-    && layout.barWidths.every((width, index) => !inlineChangeSqueezesBar(bars[index], width, index));
+    && layout.barWidths.every((width, index) => !inlineChangeSqueezesBar(bars[index], width, index, layout.effectiveKeys[index]));
 }
 
 function staffRowLayout(bars, staffKey, timeSignature) {
   const headerWidth = staffHeaderWidth(staffKey, timeSignature);
   const availableWidth = STAFF_WIDTH - headerWidth;
-  const minimumWidths = bars.map(minimumBarWidth);
+  let effectiveKey = staffKey;
+  const effectiveKeys = bars.map((bar) => {
+    const barKey = bar?.key || effectiveKey;
+    if (bar?.key) effectiveKey = bar.key;
+    return barKey;
+  });
+  const minimumWidths = bars.map((bar, index) => minimumBarWidth(bar, effectiveKeys[index]));
   const totalMinimum = minimumWidths.reduce((total, width) => total + width, 0);
   const fits = totalMinimum <= availableWidth;
   const barWidths = fits
     ? distributeBarWidths(minimumWidths, availableWidth)
     : minimumWidths;
-  return { barStart: headerWidth, barWidths, fits };
+  return { barStart: headerWidth, barWidths, fits, effectiveKeys };
 }
 
 function distributeBarWidths(minimumWidths, availableWidth) {
@@ -668,29 +804,88 @@ function distributeBarWidths(minimumWidths, availableWidth) {
   return widths;
 }
 
-function minimumBarWidth(bar) {
-  const slotCount = Math.max(bar?.chords?.length || 1, 1);
-  const slotWidth = slotCount > 4 ? 23 : 0;
-  return MIN_BAR_CONTENT_WIDTH + inlineChangeWidth(bar) + slotWidth;
+function estimatedChordWidth(text) {
+  return String(text ?? "").split("").reduce((total, character) => {
+    if (!character.trim()) return total + CHORD_SYMBOL_WIDTH;
+    if (/[A-Za-z0-9]/.test(character)) return total + CHORD_CHAR_WIDTH;
+    return total + CHORD_SYMBOL_WIDTH;
+  }, 0);
 }
 
-function inlineChangeSqueezesBar(bar, barWidth, rowIndex) {
+function chordSlotMetrics(bar, effectiveKey = state.key) {
+  const slots = Array.isArray(bar?.chords) && bar.chords.length ? bar.chords : [{ text: bar?.chord || "" }];
+  const estimatedSlots = slots.map((slot) => {
+    if (!slot?.text) return {
+      sourceText: "",
+      renderedText: "",
+      textWidth: 0,
+      slotWidth: EMPTY_CHORD_SLOT_WIDTH + CHORD_SLOT_INNER_PADDING
+    };
+    const sourceText = slot.text;
+    const renderedText = formatPreviewChord(sourceText, effectiveKey);
+    const textWidth = estimatedChordWidth(renderedText);
+    return {
+      sourceText,
+      renderedText,
+      textWidth,
+      slotWidth: Math.max(textWidth + CHORD_SLOT_INNER_PADDING, EMPTY_CHORD_SLOT_WIDTH + CHORD_SLOT_INNER_PADDING)
+    };
+  });
+  return estimatedSlots;
+}
+
+function minimumChordAreaWidth(bar, effectiveKey = state.key) {
+  const estimatedSlots = chordSlotMetrics(bar, effectiveKey);
+  const slotWidths = estimatedSlots.reduce((total, slot) => total + slot.slotWidth, 0);
+  const gaps = Math.max(estimatedSlots.length - 1, 0) * CHORD_GAP_WIDTH;
+  const extraSlots = Math.max(estimatedSlots.length - 4, 0) * EXTRA_CHORD_SLOT_WIDTH;
+  return Math.max(MIN_BAR_CONTENT_WIDTH, slotWidths + gaps + extraSlots);
+}
+
+function chordSlotLayout(bar, effectiveKey, chordAreaX, chordAreaWidth) {
+  const slots = chordSlotMetrics(bar, effectiveKey);
+  const minimumWidths = slots.map((slot) => slot.slotWidth);
+  const gaps = Math.max(slots.length - 1, 0) * CHORD_GAP_WIDTH;
+  const minimumTotal = minimumWidths.reduce((total, width) => total + width, 0) + gaps;
+  const extra = Math.max(chordAreaWidth - minimumTotal, 0);
+  const extraPerSlot = slots.length ? extra / slots.length : 0;
+  let cursor = chordAreaX;
+
+  return slots.map((slot, index) => {
+    const width = minimumWidths[index] + extraPerSlot;
+    const x = cursor + CHORD_SLOT_INNER_PADDING / 2;
+    cursor += width + CHORD_GAP_WIDTH;
+    return {
+      ...slot,
+      x,
+      width
+    };
+  });
+}
+
+function minimumBarWidth(bar, effectiveKey = state.key) {
+  return minimumChordAreaWidth(bar, effectiveKey) + inlineChangeWidth(bar);
+}
+
+function inlineChangeSqueezesBar(bar, barWidth, rowIndex, effectiveKey = state.key) {
   if (rowIndex === 0 || (!bar?.key && !bar?.timeSignature)) return false;
-  return barWidth - inlineChangeWidth(bar) < MIN_BAR_CONTENT_WIDTH;
+  return barWidth - inlineChangeWidth(bar) < minimumChordAreaWidth(bar, effectiveKey);
 }
 
 function staffHeaderWidth(staffKey, timeSignature) {
   const signature = KEY_SIGNATURES[transposeKey(staffKey)] || KEY_SIGNATURES.C;
   const keyStartX = 39;
   const timeX = keyStartX + keySignatureWidth(signature) + 14;
-  return Math.max(STAFF_INFO_WIDTH, timeX + 28);
+  const digits = Math.max(...(timeSignature || state.timeSignature).split("/").map((part) => part.trim().length), 1);
+  return timeX + digits * TIME_SIGNATURE_DIGIT_WIDTH + TIME_SIGNATURE_RIGHT_MARGIN;
 }
 
-function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowStartIndex = 0) {
+function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowStartIndex = 0, inlineMarks = {}, sectionStarts = null) {
   const width = STAFF_WIDTH;
-  const height = 112;
   const staffTop = 43 + STAFF_VERTICAL_SHIFT;
   const lineGap = 9;
+  const hasInlineMarkRow = bars.some((_, index) => Boolean(inlineMarks[rowStartIndex + index]));
+  const height = STAFF_ROW_BASE_HEIGHT;
   let effectiveKey = staffKey;
   let effectiveTimeSignature = timeSignature;
   const signature = KEY_SIGNATURES[transposeKey(staffKey)] || KEY_SIGNATURES.C;
@@ -703,6 +898,16 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
   const lines = Array.from({ length: 5 }, (_, index) =>
     `<line x1="8" y1="${staffTop + index * lineGap}" x2="${staffEnd}" y2="${staffTop + index * lineGap}" stroke="#111" stroke-width="1"/>`
   ).join("");
+
+  // A bar starts a section at its head bar; such bars get a double bar line on their
+  // left unless they already carry a repeat-start sign. When `sectionStarts` is supplied
+  // (by paginateSections) it is authoritative; otherwise a standalone row treats its
+  // first bar as the start.
+  const isSectionStart = (combinedIndex) =>
+    sectionStarts ? sectionStarts.has(combinedIndex)
+      : combinedIndex === 0 || Boolean(inlineMarks[combinedIndex]);
+
+  const rowInlineMarks = [];
 
   const barsSvg = bars.map((bar, index) => {
     const sectionIndex = rowStartIndex + index;
@@ -720,22 +925,33 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
     const isSectionLastBar = sectionIndex === sectionBars.length - 1;
     const previousEnding = endingLabel(previousBar);
     const nextEnding = endingLabel(nextBar);
-    const slotCount = Math.max(bar.chords?.length || 1, 1);
     const chordAreaX = x + inlineChange.width;
     const chordAreaWidth = Math.max(barWidth - inlineChange.width, barWidth * .42);
-    const chordTexts = (bar.chords || []).map((chord, chordIndex) => {
-      if (!chord.text) return "";
-      const chordX = chordAreaX + chordAreaWidth * (chordIndex / slotCount) + 6;
-      return previewChordText(chord.text, barEffectiveKey, chordX, 31 + STAFF_VERTICAL_SHIFT);
-    }).join("");
+    const chordTexts = chordSlotLayout(bar, barEffectiveKey, chordAreaX, chordAreaWidth)
+      .map((slot) => slot.sourceText ? previewChordText(slot.sourceText, barEffectiveKey, slot.x, CHORD_BASELINE_Y) : "")
+      .join("");
+    const inlineMark = inlineMarks[sectionIndex];
+    // Lay out the elements above the bar's left edge left-to-right so they never collide:
+    // an ending bracket's number first, then the section mark, then the Segno/Coda sign
+    // ("[1.] [A] 𝄋"). Bars without these just fall back toward the bar's left edge, and
+    // the sign also clears any inline key/time change.
+    const bracketClearance = ending && inlineMark ? INLINE_SECTION_ENDING_CLEARANCE : ending ? 18 : 0;
+    const markLeft = x + bracketClearance;
+    const markRight = inlineMark ? markLeft + inlineSectionMarkOccupiedWidth(inlineMark, staffEnd) : -Infinity;
+    const signAnchorX = x + Math.max(inlineChange.width + 12, bracketClearance + 10);
+    const signX = Math.max(signAnchorX, markRight + INLINE_SECTION_SIGN_GAP);
+    if (inlineMark) {
+      rowInlineMarks.push(inlineSectionMark(inlineMark, markLeft, staffEnd, bar));
+    } else if (bar.segno || bar.coda) {
+      const standaloneSymbolX = index === 0 ? x - 2 : signX;
+      rowInlineMarks.push(standaloneTopLaneSymbol(bar, standaloneSymbolX));
+    }
     return `
       ${chordTexts}
-      ${index > 0 && hasInlineChange ? doubleBarLine(x, staffTop, lineGap) : ""}
+      ${index > 0 && !bar.repeatStart && (hasInlineChange || isSectionStart(sectionIndex)) ? doubleBarLine(x, staffTop, lineGap) : ""}
       ${inlineChange.html}
-      ${ending ? endingBracket(x, endX, ending, previousEnding === ending, nextEnding === ending, STAFF_VERTICAL_SHIFT + ENDING_BRACKET_SHIFT, !bar.endingText) : ""}
-      ${barNavigationDirections(bar, endX)}
-      ${bar.segno ? segnoSymbol() : ""}
-      ${bar.coda ? codaSymbol() : ""}
+      ${ending ? endingBracket(x, endX, ending, previousEnding === ending, nextEnding === ending, ENDING_BRACKET_SHIFT, !bar.endingText) : ""}
+      ${barNavigationDirections(bar, x, endX, NAVIGATION_BOTTOM_LANE_Y)}
       ${bar.repeatStart ? repeatSymbol(x, "start", staffTop, lineGap) : ""}
       ${bar.repeatEnd ? repeatSymbol(endX, "end", staffTop, lineGap) : ""}
       ${isSectionLastBar && !bar.repeatEnd ? doubleBarLine(endX - 4, staffTop, lineGap) : `<line x1="${endX}" y1="${staffTop}" x2="${endX}" y2="${staffTop + lineGap * 4}" stroke="#111" stroke-width="1.2"/>`}
@@ -743,13 +959,14 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
   }).join("");
 
   return { html: `
-    <div class="staff-row">
+    <div class="staff-row${hasInlineMarkRow ? " has-inline-mark-row" : ""}">
+      ${rowInlineMarks.join("")}
       <svg class="staff-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="五線譜">
         ${lines}
         ${gClefSymbol(8, CLEF_BASELINE_Y + STAFF_VERTICAL_SHIFT)}
         ${keySymbols}
         ${timeSignatureSymbols(timeParts, timeX, STAFF_VERTICAL_SHIFT)}
-        ${(bars[0]?.key || bars[0]?.timeSignature || bars[0]?.repeatStart)
+        ${!bars[0]?.repeatStart && (bars[0]?.key || bars[0]?.timeSignature || isSectionStart(rowStartIndex))
           ? doubleBarLine(barStart, staffTop, lineGap)
           : ""}
         ${barsSvg}
@@ -810,6 +1027,7 @@ function inlineChangeWidth(bar) {
     width += keySignatureWidth(signature) + 8;
   }
   if (bar.timeSignature) width += 22;
+  if (bar.key && bar.timeSignature) width += INLINE_CHANGE_DOUBLE_STACK_PADDING;
   return Math.max(width + 4, 34);
 }
 
@@ -840,47 +1058,52 @@ function gClefSymbol(x, y) {
 function endingBracket(x, endX, ending, continuesFromPrevious, continuesToNext, yOffset = 0, appendDot = true) {
   const startX = continuesFromPrevious ? x : x + 2;
   const finishX = continuesToNext ? endX : endX - 2;
-  const label = appendDot ? `${ending}.` : ending;
+  const label = clampEndingLabel(ending, appendDot);
   const bracketOffset = yOffset - 2;
   return `
     <path d="${continuesFromPrevious ? `M ${startX} ${2 + bracketOffset}` : `M ${startX} ${24 + bracketOffset} V ${2 + bracketOffset}`} H ${finishX}" fill="none" stroke="#111" stroke-width="1"/>
-    ${continuesFromPrevious ? "" : `<text x="${x + 7}" y="${16 + yOffset}" font-family="${SVG_FONT}" font-size="12" font-weight="800">${escapeHtml(label)}</text>`}
+    ${continuesFromPrevious ? "" : `<text x="${x + 7}" y="${16 + yOffset}" font-family="${SVG_FONT}" font-size="${label.compact ? ENDING_TEXT_COMPACT_FONT_SIZE : 12}" font-weight="800">${escapeHtml(label.text)}</text>`}
   `;
 }
 
-function codaSymbol() {
-  return musicGlyph("\uE048", 80, 29, 24);
+function codaSymbol(x = 80, y = TOP_LANE_SYMBOL_Y) {
+  return musicGlyph("\uE048", x, y, 24);
 }
 
 function toCodaText(x, y) {
   return `
-    <text x="${x - 17}" y="${y}" text-anchor="end" font-family="${SVG_FONT}" font-size="14" font-style="italic">to</text>
+    <text class="direction-text direction-text-to" x="${x - 17}" y="${y}" text-anchor="end" font-family="${DIRECTION_TEXT_FONT}" font-size="14" font-weight="800">to</text>
     <text x="${x}" y="${y + 1}" text-anchor="end" font-family="${SVG_FONT}" font-size="15" font-weight="400">\uE048</text>
   `;
 }
 
 function navigationLabel(text, x, y) {
-  return `<text x="${x}" y="${y}" text-anchor="end" font-family="${SVG_FONT}" font-size="14" font-style="italic">${text}</text>`;
+  return `<text class="direction-text" x="${x}" y="${y}" text-anchor="end" font-family="${DIRECTION_TEXT_FONT}" font-size="14" font-weight="800">${text}</text>`;
 }
 
-// Fine, D.C., D.S., and to Coda all sit at the bar's bottom-right. When more than
-// one is set on the same bar, lay them out right-to-left so the labels never overlap.
-function barNavigationDirections(bar, endX, y = 96) {
+// Fine, D.C., D.S., and to Coda all sit at the bar's bottom-right, just under the staff.
+// They are kept clear of the SVG's lower edge so they do not collide with an inline
+// section mark on the row below (those marks protrude upward into the inter-row gap).
+// When more than one is set on the same bar, lay them out right-to-left so they never overlap.
+function barNavigationDirections(bar, barLeft, endX, y = NAVIGATION_BASELINE_Y) {
   const items = [];
   if (bar.fine) items.push({ width: 30, render: (right) => navigationLabel("Fine", right, y) });
   if (bar.toCoda) items.push({ width: 32, render: (right) => toCodaText(right, y) });
   if (bar.ds) items.push({ width: 26, render: (right) => navigationLabel("D.S.", right, y) });
   if (bar.dc) items.push({ width: 26, render: (right) => navigationLabel("D.C.", right, y) });
-  let right = endX - 6;
+  const barWidth = endX - barLeft;
+  let right = endX - Math.min(8, Math.max(4, barWidth * .04));
   return items.map((item) => {
-    const html = item.render(right);
-    right -= item.width + 6;
+    const idealRight = Math.min(right, barLeft + Math.max(item.width, barWidth - 10));
+    const clampedRight = Math.max(idealRight, barLeft + item.width);
+    const html = item.render(clampedRight);
+    right = clampedRight - item.width - 6;
     return html;
   }).join("");
 }
 
-function segnoSymbol() {
-  return musicGlyph("\uE047", 84, 29, 24);
+function segnoSymbol(x = 84, y = TOP_LANE_SYMBOL_Y) {
+  return musicGlyph("\uE047", x, y, 24);
 }
 
 function repeatSymbol(x, side, top, gap) {
@@ -1002,6 +1225,11 @@ elements.sectionsEditor.addEventListener("change", (event) => {
   const sectionBlock = event.target.closest(".section-block");
   if (!sectionBlock) return;
   const sectionIndex = Number(sectionBlock.dataset.sectionIndex);
+  if (event.target.classList.contains("section-continued")) {
+    state.sections[sectionIndex].continued = event.target.checked;
+    saveAndRender();
+    return;
+  }
   const barEditor = event.target.closest(".bar-editor");
   const barIndex = barEditor ? Number(barEditor.dataset.barIndex) : -1;
   const bar = barIndex >= 0 ? state.sections[sectionIndex].bars[barIndex] : null;
@@ -1027,6 +1255,13 @@ elements.sectionsEditor.addEventListener("change", (event) => {
   }
   if (event.target.classList.contains("bar-time-signature")) {
     bar.timeSignature = event.target.value;
+    activeBarOptions = `${sectionIndex}:${barIndex}`;
+    saveAndRender({ editor: true });
+    return;
+  }
+  if (event.target.classList.contains("bar-section-head")) {
+    if (event.target.checked) bar.sectionHead = true;
+    else delete bar.sectionHead;
     activeBarOptions = `${sectionIndex}:${barIndex}`;
     saveAndRender({ editor: true });
     return;
@@ -1124,6 +1359,27 @@ function effectiveStateBeforeBar(sectionIndex, barIndex) {
   return { key, timeSignature };
 }
 
+function exportFileName() {
+  return `${(state.title || "lead-sheet").replace(/[\\/:*?"<>|]/g, "_")}.json`;
+}
+
+async function saveJsonWithPicker(blob, fileName) {
+  if (typeof window.showSaveFilePicker !== "function") return false;
+  const handle = await window.showSaveFilePicker({
+    suggestedName: fileName,
+    types: [
+      {
+        description: "JSON Files",
+        accept: { "application/json": [".json"] }
+      }
+    ]
+  });
+  const writable = await handle.createWritable();
+  await writable.write(blob);
+  await writable.close();
+  return true;
+}
+
 document.querySelector("#add-section").addEventListener("click", () => {
   state.sections.push({
     label: "New Section",
@@ -1134,12 +1390,24 @@ document.querySelector("#add-section").addEventListener("click", () => {
   saveAndRender({ editor: true });
 });
 
-document.querySelector("#export-json").addEventListener("click", () => {
+document.querySelector("#export-json").addEventListener("click", async () => {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
+  const fileName = exportFileName();
+  try {
+    const saved = await saveJsonWithPicker(blob, fileName);
+    if (saved) {
+      showToast("保存先を選んでJSONを書き出しました");
+      return;
+    }
+  } catch (error) {
+    if (error?.name === "AbortError") return;
+    console.error(error);
+  }
+
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${(state.title || "lead-sheet").replace(/[\\/:*?"<>|]/g, "_")}.json`;
+  anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
   showToast("JSONを書き出しました");

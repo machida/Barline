@@ -36,7 +36,7 @@ node --check app.js
 
 ## フォント
 
-UIとコードなどの通常テキストは `Noto Sans JP` / `Noto Sans` を優先して表示し、未インストール環境ではシステムフォントへフォールバックします。楽譜内のト音記号、調号、拍子記号、Codaなど音楽記号寄りの文字要素は同梱した `Bravura` を使います。ディグリー表記のローマ数字は同梱した `Noto Serif` を使います。拍子記号の数字は通常の `0-9` ではなく、BravuraのSMuFL拍子数字グリフで描画します。BravuraとNoto SerifはSIL Open Font License 1.1で配布されているため、`assets/bravura-OFL-1.1.txt` と `assets/noto-serif-OFL.txt` を同梱しています。外部フォントの読み込みには依存しないため、オフラインでも動作します。
+UIとコードなどの通常テキストは `Noto Sans JP` / `Noto Sans` を優先して表示し、未インストール環境ではシステムフォントへフォールバックします。楽譜内のト音記号、調号、拍子記号、Codaなど音楽記号寄りの文字要素は同梱した `Bravura` を使います。ディグリー表記のローマ数字は同梱した `Noto Serif` を使います。`to Coda`、`Fine`、`D.C.`、`D.S.` のような方向指示の文字部分には、同梱した `Noto Serif` を方向指示専用 face として使います。拍子記号の数字は通常の `0-9` ではなく、BravuraのSMuFL拍子数字グリフで描画します。BravuraとNoto SerifはSIL Open Font License 1.1で配布されているため、`assets/bravura-OFL-1.1.txt` と `assets/noto-serif-OFL.txt` を同梱しています。外部フォントの読み込みには依存しないため、オフラインでも動作します。
 
 ## 調号表記
 
