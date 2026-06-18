@@ -250,7 +250,7 @@ function normalizeState(value) {
       return {
         label: String(section.label ?? ""),
         note: String(section.note ?? ""),
-        continued: Boolean(section.continued),
+        breakBefore: section.breakBefore === undefined ? !Boolean(section.continued) : Boolean(section.breakBefore),
         bars: Array.isArray(section.bars) ? section.bars.map((bar, barIndex) => {
           const chords = normalizeChordSlots(bar);
           const result = { chords };
@@ -475,8 +475,8 @@ function renderEditor() {
         <input class="section-note" type="text" value="${escapeHtml(section.note || "")}" aria-label="セクションメモ" placeholder="メモ（例: ここから歌）">
         ${sectionIndex > 0 ? `
         <label class="modulation-toggle section-continue-toggle">
-          <input class="section-continued" type="checkbox" ${section.continued ? "checked" : ""}>
-          <span>前のセクションに続けて表示</span>
+          <input class="section-break-before" type="checkbox" ${section.breakBefore ? "checked" : ""}>
+          <span>この前で改行する</span>
         </label>` : ""}
       </div>
       <div class="bars-editor">
@@ -599,7 +599,7 @@ function renderSheet() {
 function groupSections(sections) {
   const groups = [];
   sections.forEach((section, index) => {
-    if (index === 0 || !section.continued || !groups.length) groups.push([section]);
+    if (index === 0 || section.breakBefore !== false || !groups.length) groups.push([section]);
     else groups[groups.length - 1].push(section);
   });
   return groups;
@@ -613,8 +613,8 @@ function sectionHeadOffset(section) {
   return index > 0 ? index : 0;
 }
 
-// Sections marked `continued` share staff rows with the preceding section. A group
-// is the lead section plus its continued followers; their bars are concatenated so
+// Sections without `breakBefore` share staff rows with the preceding section. A group
+// is the lead section plus its followers that keep flowing; their bars are concatenated so
 // the row splitter can pack them onto the same lines. Every section head is rendered
 // as the same inline mark above its head bar, including the group's first section.
 // `sectionStarts` collects the combined-bar offsets that open a section so the staff
@@ -1225,8 +1225,8 @@ elements.sectionsEditor.addEventListener("change", (event) => {
   const sectionBlock = event.target.closest(".section-block");
   if (!sectionBlock) return;
   const sectionIndex = Number(sectionBlock.dataset.sectionIndex);
-  if (event.target.classList.contains("section-continued")) {
-    state.sections[sectionIndex].continued = event.target.checked;
+  if (event.target.classList.contains("section-break-before")) {
+    state.sections[sectionIndex].breakBefore = event.target.checked;
     saveAndRender();
     return;
   }
@@ -1297,6 +1297,7 @@ elements.sectionsEditor.addEventListener("click", (event) => {
   if (event.target.closest(".copy-section")) {
     const copiedSection = clone(state.sections[sectionIndex]);
     copiedSection.label = `${copiedSection.label || "Section"} Copy`;
+    copiedSection.breakBefore = true;
     state.sections.splice(sectionIndex + 1, 0, copiedSection);
     activeSectionIndex = sectionIndex + 1;
     saveAndRender({ editor: true });
@@ -1384,6 +1385,7 @@ document.querySelector("#add-section").addEventListener("click", () => {
   state.sections.push({
     label: "New Section",
     note: "",
+    breakBefore: state.sections.length > 0,
     bars: Array.from({ length: 4 }, () => ({ chords: createChordSlots() }))
   });
   activeSectionIndex = state.sections.length - 1;

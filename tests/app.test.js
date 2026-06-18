@@ -381,11 +381,11 @@ test("omits section mark when a section continues after a page break", () => {
   assert.doesNotMatch(secondPageHtml, /section-continued|続/);
 });
 
-test("packs a continued section onto the previous section's row", () => {
+test("packs a section without breakBefore onto the previous section's row", () => {
   const app = loadApp();
   const sections = [
     { label: "A", bars: [{ chords: [{ text: "C" }] }, { chords: [{ text: "F" }] }] },
-    { label: "B", continued: true, bars: [{ chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }] }
+    { label: "B", breakBefore: false, bars: [{ chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }] }
   ];
   const pages = app.paginateSections(sections);
   const html = pages[0].blocks.join("");
@@ -396,11 +396,11 @@ test("packs a continued section onto the previous section's row", () => {
   assert.match(html, /<div class="rehearsal-mark">B<\/div>/);
 });
 
-test("keeps non-continued sections on separate rows", () => {
+test("keeps breakBefore sections on separate rows", () => {
   const app = loadApp();
   const sections = [
     { label: "A", bars: [{ chords: [{ text: "C" }] }, { chords: [{ text: "F" }] }] },
-    { label: "B", bars: [{ chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }] }
+    { label: "B", breakBefore: true, bars: [{ chords: [{ text: "G" }] }, { chords: [{ text: "C" }] }] }
   ];
   const pages = app.paginateSections(sections);
   const html = pages[0].blocks.join("");
@@ -411,18 +411,20 @@ test("keeps non-continued sections on separate rows", () => {
   assert.match(html, /<div class="rehearsal-mark">B<\/div>/);
 });
 
-test("preserves the continued flag through normalization", () => {
+test("normalization maps legacy continued and keeps breakBefore", () => {
   const app = loadApp();
   const normalized = app.normalizeState({
     title: "T", key: "C", timeSignature: "4/4",
     sections: [
       { label: "A", bars: [{ chords: [{ text: "C" }] }] },
-      { label: "B", continued: true, bars: [{ chords: [{ text: "G" }] }] }
+      { label: "B", continued: true, bars: [{ chords: [{ text: "G" }] }] },
+      { label: "C", breakBefore: true, bars: [{ chords: [{ text: "Am" }] }] }
     ]
   });
 
-  assert.equal(normalized.sections[0].continued, false);
-  assert.equal(normalized.sections[1].continued, true);
+  assert.equal(normalized.sections[0].breakBefore, true);
+  assert.equal(normalized.sections[1].breakBefore, false);
+  assert.equal(normalized.sections[2].breakBefore, true);
 });
 
 test("keeps a section-head flag only on later bars", () => {
