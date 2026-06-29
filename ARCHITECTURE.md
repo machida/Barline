@@ -71,6 +71,8 @@ Rows are selected by:
 
 The default target is up to four bars per staff row. If inline key/time changes or many chord slots would squeeze code text too much, the row drops to three, two, or one bar.
 
+Left-edge time-signature rendering is also part of row selection. The first rendered staff row of the whole chart keeps the header time signature; later rows omit it and reclaim that width for bars. `splitSectionRows()` carries this as `showLeftTimeSignature`, and `renderStaffRow()` / `staffRowLayout()` must receive the same flag or layout and SVG output will diverge.
+
 The row width model is:
 
 - `STAFF_WIDTH`: full SVG staff width
@@ -86,7 +88,7 @@ Bar minimum width is no longer based on slot count alone. `minimumChordAreaWidth
 
 `minimumBarWidth()` then adds inline key/time-change width on top of that chord-area estimate. This means long chords, degree notation, and high slot counts can reduce bars-per-row even when the raw slot count matches a simpler bar elsewhere.
 
-`staffHeaderWidth()` sets where the first bar starts (`barStart`). It is the clef/key area plus a time-signature allowance sized to the time signature's digit count (`TIME_SIGNATURE_DIGIT_WIDTH` per digit) and a small `TIME_SIGNATURE_RIGHT_MARGIN`. This keeps two-digit meters such as `12/8` clear of the first bar line while removing the dead space narrow keys previously inherited from a fixed minimum. Because `barStart` also defines `availableWidth = STAFF_WIDTH - barStart`, changing these constants shifts how many bars fit per row; re-verify row splitting and print pagination after tuning them.
+`staffHeaderWidth()` sets where the first bar starts (`barStart`). On the first rendered row, it is the clef/key area plus a time-signature allowance sized to the time signature's digit count (`TIME_SIGNATURE_DIGIT_WIDTH` per digit) and a small `TIME_SIGNATURE_RIGHT_MARGIN`. This keeps two-digit meters such as `12/8` clear of the first bar line while removing the dead space narrow keys previously inherited from a fixed minimum. On later rows, the left time signature is omitted and `staffHeaderWidth()` returns only the clef/key area, so those rows start earlier and gain more bar width. Because `barStart` also defines `availableWidth = STAFF_WIDTH - barStart`, changing these constants or the first-row rule shifts how many bars fit per row; re-verify row splitting and print pagination after tuning them.
 
 `distributeBarWidths()` expands bars from their minimum widths. If one bar reaches `MAX_BAR_WIDTH`, the leftover width is redistributed to remaining flexible bars.
 
@@ -100,6 +102,8 @@ Bar minimum width is no longer based on slot count alone. `minimumChordAreaWidth
 - `STAFF_ROW_WITH_HEADING_WEIGHT`
 
 Section headings are rendered only when `startIndex === 0`. If a page break occurs in the middle of a section, the continuation page intentionally omits the rehearsal mark to avoid confusing `[C]`-style marks with a new section start.
+
+`paginateSections()` also owns the global "first row" decision for the left time signature. It tracks whether any staff row has already been rendered and passes `showLeftTimeSignature` into both `splitSectionRows()` and `renderStaffRow()`. This is global across the full chart, not per section or per page.
 
 A section opens with a double bar line on the left of its head bar, drawn by `renderStaffRow()` for any section-start bar that does not already carry a repeat-start sign. `paginateSections()` collects these head offsets in a `sectionStarts` set and passes it to `renderStaffRow()`; when omitted (standalone calls) the row's first bar is treated as the start. A row that only continues a section midway does not get this line.
 

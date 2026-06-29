@@ -195,8 +195,8 @@ test("keeps repeat-start, inline key signature, and time change in order", () =>
   const app = loadApp();
   const repeatRowBars = app.state.sections[0].bars;
   const repeatRows = app.splitSectionRows(repeatRowBars, app.state.key, app.state.timeSignature);
-  const firstRepeatRow = app.renderStaffRow([repeatRowBars[1]], app.state.key, app.state.timeSignature, repeatRowBars, 1).html;
-  const changedBarX = app.staffRowLayout([repeatRowBars[1]], app.state.key, app.state.timeSignature).barStart;
+  const firstRepeatRow = app.renderStaffRow([repeatRowBars[1]], app.state.key, app.state.timeSignature, repeatRowBars, 1, {}, null, true).html;
+  const changedBarX = app.staffRowLayout([repeatRowBars[1]], app.state.key, app.state.timeSignature, true).barStart;
 
   assert.equal(repeatRows.map((row) => row.bars.length).join(","), "2");
   assert.match(firstRepeatRow, new RegExp(`x1="${changedBarX}" y1="${43 + app.STAFF_VERTICAL_SHIFT}"`));
@@ -574,6 +574,30 @@ test("opens a section's first bar with a double bar line unless it has a repeat 
   const continuedHtml = app.renderStaffRow(combined, "C", "4/4", combined, 0, { 2: { label: "B" } }).html;
   assert.match(continuedHtml, new RegExp(`x1="${startX}"`));
   assert.match(continuedHtml, new RegExp(`x1="${startX + 4}"`));
+});
+
+test("shows the left time signature only on the first rendered row", () => {
+  const app = loadApp();
+  const rows = app.splitSectionRows(
+    Array.from({ length: 8 }, () => ({ chords: [{ text: "C" }, { text: "F" }, { text: "G" }, { text: "C" }] })),
+    "C",
+    "4/4",
+    true
+  );
+
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].showLeftTimeSignature, true);
+  assert.equal(rows[1].showLeftTimeSignature, false);
+
+  const firstHtml = app.renderStaffRow(rows[0].bars, "C", "4/4", rows.flatMap((row) => row.bars), rows[0].startIndex, {}, null, rows[0].showLeftTimeSignature).html;
+  const secondHtml = app.renderStaffRow(rows[1].bars, "C", "4/4", rows.flatMap((row) => row.bars), rows[1].startIndex, {}, null, rows[1].showLeftTimeSignature).html;
+
+  assert.match(firstHtml, /\uE084/);
+  assert.doesNotMatch(secondHtml, /\uE084/);
+
+  const firstLayout = app.staffRowLayout(rows[0].bars, "C", "4/4", true);
+  const secondLayout = app.staffRowLayout(rows[1].bars, "C", "4/4", false);
+  assert.ok(secondLayout.barStart < firstLayout.barStart);
 });
 
 test("keeps canonical preview scenarios renderable", () => {

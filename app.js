@@ -623,6 +623,7 @@ function paginateSections(sections) {
   const pages = [{ blocks: [], used: 0, capacity: FIRST_PAGE_ROW_CAPACITY }];
   let effectiveKey = state.key;
   let effectiveTimeSignature = state.timeSignature;
+  let hasRenderedAnyRow = false;
 
   groupSections(sections).forEach((group) => {
     const leadSection = group[0];
@@ -638,11 +639,21 @@ function paginateSections(sections) {
       combinedBars.push(...section.bars);
     });
 
-    const rows = splitSectionRows(combinedBars, effectiveKey, effectiveTimeSignature);
-    rows.forEach(({ bars, startIndex }) => {
-      const renderedRow = renderStaffRow(bars, effectiveKey, effectiveTimeSignature, combinedBars, startIndex, inlineMarks, sectionStarts);
+    const rows = splitSectionRows(combinedBars, effectiveKey, effectiveTimeSignature, !hasRenderedAnyRow);
+    rows.forEach(({ bars, startIndex, showLeftTimeSignature }) => {
+      const renderedRow = renderStaffRow(
+        bars,
+        effectiveKey,
+        effectiveTimeSignature,
+        combinedBars,
+        startIndex,
+        inlineMarks,
+        sectionStarts,
+        showLeftTimeSignature
+      );
       effectiveKey = renderedRow.effectiveKey;
       effectiveTimeSignature = renderedRow.effectiveTimeSignature;
+      hasRenderedAnyRow = true;
 
       let page = pages[pages.length - 1];
       if (page.used > 0 && page.used + 1 > page.capacity) {
@@ -719,44 +730,46 @@ function standaloneTopLaneSymbol(bar, x) {
   return `<div class="section-inline-mark top-lane-symbol-only" style="left:${x}px;">${symbol}</div>`;
 }
 
-function splitSectionRows(sectionBars, initialKey, initialTimeSignature) {
+function splitSectionRows(sectionBars, initialKey, initialTimeSignature, showTimeSignatureAtRowStart = true) {
   const rows = [];
   let effectiveKey = initialKey;
   let effectiveTimeSignature = initialTimeSignature;
   let index = 0;
+  let showLeftTimeSignature = showTimeSignatureAtRowStart;
 
   while (index < sectionBars.length) {
-    const rowBars = chooseRowBars(sectionBars, index, effectiveKey, effectiveTimeSignature);
-    rows.push({ bars: rowBars, startIndex: index });
+    const rowBars = chooseRowBars(sectionBars, index, effectiveKey, effectiveTimeSignature, showLeftTimeSignature);
+    rows.push({ bars: rowBars, startIndex: index, showLeftTimeSignature });
     rowBars.forEach((bar) => {
       if (bar.key) effectiveKey = bar.key;
       if (bar.timeSignature) effectiveTimeSignature = bar.timeSignature;
     });
     index += rowBars.length;
+    showLeftTimeSignature = false;
   }
 
   return rows;
 }
 
-function chooseRowBars(sectionBars, startIndex, effectiveKey, effectiveTimeSignature) {
+function chooseRowBars(sectionBars, startIndex, effectiveKey, effectiveTimeSignature, showLeftTimeSignature = true) {
   const remainingCount = sectionBars.length - startIndex;
   const maxCount = Math.min(MAX_BARS_PER_ROW, remainingCount);
   for (let count = maxCount; count > 1; count -= 1) {
     const bars = sectionBars.slice(startIndex, startIndex + count);
-    if (rowCanFit(bars, effectiveKey, effectiveTimeSignature)) return bars;
+    if (rowCanFit(bars, effectiveKey, effectiveTimeSignature, showLeftTimeSignature)) return bars;
   }
   return sectionBars.slice(startIndex, startIndex + 1);
 }
 
-function rowCanFit(bars, effectiveKey, effectiveTimeSignature) {
-  const layout = staffRowLayout(bars, effectiveKey, effectiveTimeSignature);
+function rowCanFit(bars, effectiveKey, effectiveTimeSignature, showLeftTimeSignature = true) {
+  const layout = staffRowLayout(bars, effectiveKey, effectiveTimeSignature, showLeftTimeSignature);
   return layout.fits
     && layout.barWidths.every((width, index) => width >= minimumBarWidth(bars[index]))
     && layout.barWidths.every((width, index) => !inlineChangeSqueezesBar(bars[index], width, index, layout.effectiveKeys[index]));
 }
 
-function staffRowLayout(bars, staffKey, timeSignature) {
-  const headerWidth = staffHeaderWidth(staffKey, timeSignature);
+function staffRowLayout(bars, staffKey, timeSignature, showLeftTimeSignature = true) {
+  const headerWidth = staffHeaderWidth(staffKey, timeSignature, showLeftTimeSignature);
   const availableWidth = STAFF_WIDTH - headerWidth;
   let effectiveKey = staffKey;
   const effectiveKeys = bars.map((bar) => {
@@ -872,15 +885,17 @@ function inlineChangeSqueezesBar(bar, barWidth, rowIndex, effectiveKey = state.k
   return barWidth - inlineChangeWidth(bar) < minimumChordAreaWidth(bar, effectiveKey);
 }
 
-function staffHeaderWidth(staffKey, timeSignature) {
+function staffHeaderWidth(staffKey, timeSignature, showLeftTimeSignature = true) {
   const signature = KEY_SIGNATURES[transposeKey(staffKey)] || KEY_SIGNATURES.C;
   const keyStartX = 39;
-  const timeX = keyStartX + keySignatureWidth(signature) + 14;
+  const keyWidth = keySignatureWidth(signature);
+  if (!showLeftTimeSignature) return keyStartX + keyWidth + 14;
+  const timeX = keyStartX + keyWidth + 14;
   const digits = Math.max(...(timeSignature || state.timeSignature).split("/").map((part) => part.trim().length), 1);
   return timeX + digits * TIME_SIGNATURE_DIGIT_WIDTH + TIME_SIGNATURE_RIGHT_MARGIN;
 }
 
-function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowStartIndex = 0, inlineMarks = {}, sectionStarts = null) {
+function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowStartIndex = 0, inlineMarks = {}, sectionStarts = null, showLeftTimeSignature = rowStartIndex === 0) {
   const width = STAFF_WIDTH;
   const staffTop = 43 + STAFF_VERTICAL_SHIFT;
   const lineGap = 9;
@@ -893,7 +908,7 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
   const keyStartX = 39;
   const keySymbols = keySignatureSymbols(signature, keyStartX, STAFF_VERTICAL_SHIFT);
   const timeX = keyStartX + keySignatureWidth(signature) + 14;
-  const { barStart, barWidths } = staffRowLayout(bars, staffKey, timeSignature);
+  const { barStart, barWidths } = staffRowLayout(bars, staffKey, timeSignature, showLeftTimeSignature);
   const staffEnd = barStart + barWidths.reduce((total, barWidth) => total + barWidth, 0);
   const lines = Array.from({ length: 5 }, (_, index) =>
     `<line x1="8" y1="${staffTop + index * lineGap}" x2="${staffEnd}" y2="${staffTop + index * lineGap}" stroke="#111" stroke-width="1"/>`
@@ -965,7 +980,7 @@ function renderStaffRow(bars, staffKey, timeSignature, sectionBars = bars, rowSt
         ${lines}
         ${gClefSymbol(8, CLEF_BASELINE_Y + STAFF_VERTICAL_SHIFT)}
         ${keySymbols}
-        ${timeSignatureSymbols(timeParts, timeX, STAFF_VERTICAL_SHIFT)}
+        ${showLeftTimeSignature ? timeSignatureSymbols(timeParts, timeX, STAFF_VERTICAL_SHIFT) : ""}
         ${!bars[0]?.repeatStart && (bars[0]?.key || bars[0]?.timeSignature || isSectionStart(rowStartIndex))
           ? doubleBarLine(barStart, staffTop, lineGap)
           : ""}
